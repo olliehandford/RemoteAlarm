@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>RemoteAlarm</title>
+    <link rel="stylesheet" href="https://bootswatch.com/3/lumen/bootstrap.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/eonasdan-bootstrap-datetimepicker/4.17.49/css/bootstrap-datetimepicker.min.css"
+        integrity="sha512-ipfmbgqfdejR27dWn02UftaAzUfxJ3HR4BDQYuITYSj6ZQfGT1NulP4BOery3w/dT2PYAe3bG5Zm/owm7MuFhA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            height: 100%;
+        }
+
+        .container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .is-hidden-desktop {
+            display: none;
+        }
+    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/countdown/2.6.0/countdown.min.js"
+            integrity="sha512-FkM4ZGExuYz4rILLbNzw8f3HxTN9EKdXrQYcYfdluxJBjRLthYPxxZixV/787qjN3JLs2607yN5XknR/cQMU8w=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <h1>RemoteAlarm</h1>
+        </div>
+        <div class="row">
+        <div class="col-md-4">
+            <h3>What is RemoteAlarm?</h3>
+            <p>Use RemoteAlarm to set an alarm on your PC, that will go off on a mobile device!</p>
+            <p>All you need to do is go to this site on your phone and enter the <strong>room code</strong>.</p>
+            <p><small>RemoteAlarm web page must be left open on the mobile device.</small></p>
+        </div>
+        <div class="col-md-4">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <h1>Room code: <span class="label label-success" id="roomCode"></span></h1>
+                <div class="is-hidden-desktop">
+                    <div class="form-group" style="margin-top: 20px;">
+                        <input type="text" class="form-control" placeholder="Enter a room code" id="joiningRoomCode" />
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;" onclick="joinroom()">Join room</button>
+                </div>
+                        <div class="form-group" style="margin-top: 20px;">
+                            <div class='input-group date' id='datetimepicker1'>
+                                <input type='text' class="form-control" />
+                                <span class="input-group-addon">
+                                    <span class="glyphicon glyphicon-calendar"></span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 20px;">
+                            <input type='text' class="form-control" id="alarmName" placeholder="Alarm Name" />
+                        </div>
+                <button class="btn btn-primary" style="width: 100%;" id="sendAlarm" type="submit" onclick="sendAlarm()">Send Alarm</button>
+                <hr>
+                <h3 id="timer" style="text-align: center; margin-bottom: 20px;"></h3>
+                <button class="btn btn-warning" id="stopTimer" style="width: 100%; display: none;" type="submit" onclick="stopTimer()">Stop</button>
+            </div>
+        </div>
+            </div>
+                <div class="col-md-4">
+                    <h3>You are currently on a <span class="label" id="deviceType"></span></h3>
+                    <hr>
+                    <h6>Device Feed:</h6>
+                    <ul class="list-group" id="feed">
+                        <li class="list-group-item">
+                            <span class="badge">Desktop</span>
+                            User connected to this room
+                        </li>
+                    </ul>
+                </div>
+    </div>
+
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+    integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+    crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"
+        integrity="sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/eonasdan-bootstrap-datetimepicker/4.17.49/js/bootstrap-datetimepicker.min.js"
+        integrity="sha512-jPwanAeILSRxZLeyP1XYBOo67+how4C1Ij54LQSa8xIOP3hKyeWRe24C0scI4QrTeQywKd1meF4Pak/Glv34vA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+    var socket = io();
+
+    var code = Math.random().toString(36).substring(7);
+    updateCode(code);
+    socket.emit('welcomeDesktop', code);
+
+    function updateCode(code) {
+        var roomCodeEle = document.getElementById('roomCode');
+        roomCodeEle.textContent = code;
+    }
+
+    function joinroom()
+    {
+        var submittedRoomCode = document.getElementById('joiningRoomCode').value;
+        updateCode(submittedRoomCode);
+        socket.emit('welcomeDesktop', submittedRoomCode);
+        code = submittedRoomCode;
+        navigator.vibrate(300);
+    }
+
+    function sendVibration(ms)
+    {
+        console.log($('#datetimepicker1').data("DateTimePicker").date());
+        socket.emit('sendVibration', {roomCode: code, ms: ms});
+    }
+
+    
+    function sendAlarm() {
+            console.log($('#datetimepicker1').data("DateTimePicker").date().unix());
+            socket.emit('sendAlarm', { roomCode: code, dateTime: $('#datetimepicker1').data("DateTimePicker").date().unix(), alarmName: $('#alarmName').val() });
+    }
+
+   function checkIfMobile () {
+            let check = false;
+            (function (a) { if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(a) || /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0, 4))) check = true; })(navigator.userAgent || navigator.vendor || window.opera);
+            return check;
+    }
+
+    function startTimer(endTime) {
+
+        var currentTs = Math.round((new Date()).getTime() / 1000);
+        
+
+        if (endTime >= currentTs) 
+        {
+            var deadline = new Date(endTime * 1000);
+            $('#timer').fadeIn().text(countdown(deadline, new Date()).toString()).addClass('text-info'); 
+        }
+        else {
+            $('#timer').text("Timer has finished!").removeClass('text-info').addClass('text-danger'); 
+            $('#stopTimer').fadeIn().show();
+            navigator.vibrate(100);
+        }
+    }
+
+    function stopTimer()
+    {
+        clearInterval(interval);
+    }
+
+    $(function () {
+            $('#datetimepicker1').datetimepicker({
+                defaultDate: moment().add(10, 'm')
+            });
+            var isMobile = checkIfMobile()
+            
+            if(isMobile) {
+                $('#deviceType').text("Mobile").addClass('label-success');
+                $('.is-hidden-desktop').css('display', 'block');
+                $('#datetimepicker1').hide();
+                $('#alarmName').hide();
+                $('#sendAlarm').hide();
+            }
+            else {
+                $('#deviceType').text("Desktop").addClass('label-info');
+            }
+
+    })
+
+    var interval;
+
+    socket.on('recieveVibration', function (vibObject) {
+        
+        if(code === vibObject.roomCode){
+            navigator.vibrate(vibObject.ms);
+            console.log('hello');
+        }
+    });
+
+
+    socket.on('recieveAlarm', function (alarmObject) {
+            if (code === alarmObject.roomCode && checkIfMobile()) {
+                $("#feed").hide().append('<li class="list-group-item">Alarm called ' + alarmObject.alarmName + ' recieved.</li>').fadeIn(1000);
+
+                interval = setInterval(startTimer, 1000, alarmObject.dateTime);
+            }
+    });
+    
+    socket.on('recieveNewUser', function (userObject) {
+        console.log('new user');
+            if (code === userObject.roomCode) {
+                $("#feed").hide().append('<li class="list-group-item">User connected to this room <span class="badge badge-success">Mobile</span></li>').fadeIn(1000);
+            }
+    });
+</script>
+</body>
+</html>
